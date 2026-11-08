@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Protótipo protegido</title>
+<script>
+  // Qualquer endereço que não existe (ou um endereço interno aberto antes da senha) volta para a tela de senha.
+  var raiz = '/' + (location.pathname.split('/')[1] || '') + '/';
+  location.replace(raiz === '//' ? '/' : raiz);
+</script>
+</head>
+<body style="font-family:system-ui,sans-serif;padding:24px">
+<p>Este protótipo abre com senha. <a href="./">Ir para a tela de acesso</a>.</p>
+</body>
+</html>
