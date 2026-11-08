@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Protótipo protegido</title>
+<style>
+  :root { color-scheme: light dark; --fundo: #F4F5FC; --card: #FFFFFF; --borda: #DDE1EE; --texto: #141826; --suave: #4E566E; --primaria: #2563FF; --primaria-texto: #FFFFFF; --erro: #B42318; --foco: #8DADFD; }
+  @media (prefers-color-scheme: dark) { :root { --fundo: #14161F; --card: #1E2130; --borda: #3A4157; --texto: #E6E8F0; --suave: #B7BCC8; --primaria: #5C8AFF; --primaria-texto: #0B0D14; --erro: #FF8A80; } }
+  * { box-sizing: border-box; margin: 0; }
+  body { min-height: 100dvh; display: grid; place-items: center; padding: 16px; background: var(--fundo); color: var(--texto); font: 400 16px/24px Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { width: min(400px, 100%); background: var(--card); border: 1px solid var(--borda); border-radius: 16px; padding: 32px 24px; display: grid; gap: 24px; }
+  .marca { display: flex; align-items: center; gap: 16px; }
+  .marca svg { width: 48px; height: 48px; flex: none; }
+  h1 { font-size: 20px; line-height: 28px; font-weight: 600; }
+  p { color: var(--suave); font-size: 14px; line-height: 20px; }
+  form { display: grid; gap: 8px; }
+  label { font-weight: 500; font-size: 14px; }
+  .campo { position: relative; }
+  input { width: 100%; height: 48px; padding: 0 56px 0 16px; border: 1px solid var(--borda); border-radius: 12px; background: transparent; color: inherit; font: inherit; }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+  input[aria-invalid="true"] { border-color: var(--erro); }
+  .olho { position: absolute; right: 4px; top: 4px; width: 40px; height: 40px; border: 0; border-radius: 8px; background: none; color: var(--suave); cursor: pointer; display: grid; place-items: center; }
+  .olho svg { width: 20px; height: 20px; }
+  .entrar { height: 48px; margin-top: 8px; border: 0; border-radius: 999px; background: var(--primaria); color: var(--primaria-texto); font: 600 16px/1 inherit; cursor: pointer; transition: transform 120ms, opacity 120ms; }
+  .entrar:active { transform: scale(.98); }
+  .entrar[disabled] { opacity: .7; cursor: progress; }
+  #msg { min-height: 20px; font-size: 14px; line-height: 20px; color: var(--suave); }
+  #msg.erro { color: var(--erro); }
+  small { color: var(--suave); font-size: 12px; line-height: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="marca">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#2563FF"/><circle cx="24" cy="24" r="19.5" fill="none" stroke="#0036BE" stroke-width="1.5"/><path d="M24 11c1 6 3 8 9 9-6 1-8 3-9 9-1-6-3-8-9-9 6-1 8-3 9-9z" fill="#fff"/></svg>
+    <div><h1>Protótipo Moedas Lume</h1><p>Projeto de UI/UX · acesso com senha</p></div>
+  </div>
+  <form id="f" novalidate>
+    <label for="senha">Senha</label>
+    <div class="campo">
+      <input id="senha" type="password" autocomplete="current-password" required aria-describedby="msg">
+      <button class="olho" type="button" id="olho" aria-label="Mostrar senha" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+    <p id="msg" role="status" aria-live="polite"></p>
+    <button class="entrar" type="submit" id="ok">Entrar</button>
+  </form>
+  <small>O conteúdo deste site é criptografado e só abre com a senha. Os dados do protótipo são fictícios.</small>
+</main>
+<script>
+(function () {
+  var CACHE = 'mp-protegido', f = document.getElementById('f'), campo = document.getElementById('senha'), msg = document.getElementById('msg'), ok = document.getElementById('ok');
+  var destino = function () { return window.innerWidth < 900 ? 'app/index.html' : 'app/vitrine.html'; };
+  function aviso(t, erro) { msg.textContent = t; msg.className = erro ? 'erro' : ''; campo.setAttribute('aria-invalid', erro ? 'true' : 'false'); }
+  function b64(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  if (!('serviceWorker' in navigator) || !window.crypto || !crypto.subtle) { aviso('Este navegador não consegue abrir o protótipo. Use uma versão recente do Chrome, Edge, Safari ou Firefox.', true); ok.disabled = true; return; }
+  var pacote = fetch('conteudo.bin', { cache: 'no-store' }).then(function (r) { return r.json(); });
+  var registro = navigator.serviceWorker.register('sw.js');
+  // ?sair = esquece a senha neste aparelho. Versão nova do site = pede a senha de novo.
+  var sair = /[?&]sair/.test(location.search);
+  Promise.all([pacote, caches.open(CACHE)]).then(function (x) {
+    var p = x[0], cache = x[1];
+    if (sair) { caches.delete(CACHE); aviso('Pronto: a senha foi esquecida neste aparelho.'); return; }
+    return cache.match(new URL('app/__versao', location.href).href).then(function (r) { return r && r.text(); }).then(function (v) {
+      if (v === p.iv) return registro.then(function () { return navigator.serviceWorker.ready; }).then(function () { location.replace(destino()); });
+      if (v) caches.delete(CACHE);
+      campo.focus();
+    });
+  }).catch(function () { aviso('Não deu para carregar agora. Confira a internet e recarregue a página.', true); });
+  document.getElementById('olho').onclick = function () {
+    var ver = campo.type === 'password'; campo.type = ver ? 'text' : 'password';
+    this.setAttribute('aria-pressed', String(ver)); this.setAttribute('aria-label', ver ? 'Esconder senha' : 'Mostrar senha'); campo.focus();
+  };
+  f.onsubmit = function (e) {
+    e.preventDefault();
+    if (!campo.value) { aviso('Digite a senha.', true); campo.focus(); return; }
+    ok.disabled = true; ok.textContent = 'Abrindo…'; aviso('Conferindo a senha…');
+    var p;
+    pacote.then(function (x) {
+      p = x;
+      return crypto.subtle.importKey('raw', new TextEncoder().encode(campo.value), 'PBKDF2', false, ['deriveKey']);
+    }).then(function (base) {
+      return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(p.sal), iterations: p.iteracoes, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    }).then(function (chave) {
+      return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(p.iv) }, chave, b64(p.dados));
+    }).then(function (claro) {
+      var arquivos = JSON.parse(new TextDecoder().decode(claro));
+      return caches.delete(CACHE).then(function () { return caches.open(CACHE); }).then(function (cache) {
+        var base = new URL('app/', location.href).href;
+        var puts = Object.keys(arquivos).map(function (nome) {
+          return cache.put(base + nome, new Response(b64(arquivos[nome].dados), { headers: { 'Content-Type': arquivos[nome].tipo } }));
+        });
+        puts.push(cache.put(base + '__versao', new Response(p.iv)));
+        return Promise.all(puts);
+      });
+    }).then(function () {
+      return registro.then(function () { return navigator.serviceWorker.ready; });
+    }).then(function () {
+      aviso('Senha certa. Abrindo o protótipo…'); location.replace(destino());
+    }).catch(function () {
+      ok.disabled = false; ok.textContent = 'Entrar';
+      aviso('Senha incorreta. Confira e tente de novo.', true); campo.select();
+    });
+  };
+})();
+</script>
+</body>
+</html>
